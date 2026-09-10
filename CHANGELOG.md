@@ -1,0 +1,9 @@
+# Changelog
+
+## [0.2.0](https://github.com/alrayyes/forgejo-mirror-sync/compare/v0.1.0...v0.2.0) (2026-09-10)
+
+
+### Features
+
+* mirror public GitHub repos to Forgejo and reconcile archived state ([1aff7d3](https://github.com/alrayyes/forgejo-mirror-sync/commit/1aff7d33f3450a125acf87749f5f3e24dfe49fb3))
+* mirror public GitHub repos to Forgejo and reconcile archived state ([80df794](https://github.com/alrayyes/forgejo-mirror-sync/commit/80df794f544e0b718f4003f72772553d3ba1efed)), closes [#1](https://github.com/alrayyes/forgejo-mirror-sync/issues/1)
