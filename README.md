@@ -80,6 +80,43 @@ it happen.
 `--dry-run` and `--yes` both bypass the prompt; `--dry-run` additionally
 guarantees nothing is written, `--yes` still writes.
 
+## Configuration
+
+Flags win over environment variables (`FORGEJO_MIRROR_SYNC_GITHUB_OWNER`,
+`FORGEJO_MIRROR_SYNC_FORGEJO_OWNER`, and so on), which win over a config
+file, which wins over the built-in defaults shown in the flags list.
+
+```sh
+forgejo-mirror-sync init
+```
+
+writes a starter config file, populated with today's defaults, to
+`$XDG_CONFIG_HOME/forgejo-mirror-sync/config.yaml` (`~/.config/` if
+`XDG_CONFIG_HOME` isn't set). The first time you run the tool with no
+config file and no relevant environment variable set, it offers to run
+`init` for you; say no (or run non-interactively with no `--yes`) and it
+just continues on the built-in defaults for that one run.
+
+## Docker
+
+```sh
+docker run --rm ghcr.io/alrayyes/forgejo-mirror-sync:latest --dry-run
+```
+
+The image bundles its own `gh` and `tea` — mount your existing credentials
+in to use it for real:
+
+```sh
+docker run --rm \
+  -v "$HOME/.config/gh:/home/mirror-sync/.config/gh:ro" \
+  -v "$HOME/.config/tea:/home/mirror-sync/.config/tea:ro" \
+  ghcr.io/alrayyes/forgejo-mirror-sync:latest
+```
+
+**`linux/amd64` only for now** — the image bakes in a pinned `gh`/`tea`
+binary pair for that one architecture; `arm64` is a real gap, not an
+oversight (see the `Dockerfile`'s own comment).
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the toolchain, the hooks, and

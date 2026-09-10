@@ -10,7 +10,9 @@
   whatever your host happens to have — a host `go`/`golangci-lint` pair
   can drift out of sync with each other, or with what `go.mod` declares,
   independently of anything in this repo. `rules/go-mod.md`,
-  `rules/go-lint.md`.
+  `rules/go-lint.md`. Also what `scripts/docker-build-check.sh` and
+  hadolint both need, for the shipped image itself (see the README's
+  Docker section).
 - **[bun](https://bun.sh)** for the tooling that isn't Go — commitlint,
   Prettier, markdownlint, and the [lefthook](https://lefthook.dev) that runs
   the git hooks. There's a `package.json`, but nothing here is JavaScript;
@@ -57,6 +59,9 @@ go vet ./...
 ./scripts/go-docker.sh go mod tidy -diff   # broader than `go mod edit -fmt`: catches a stale require too
 govulncheck ./...
 goreleaser check
+./scripts/docker-build-check.sh local-check   # proves the shipped image still builds
+docker run --rm -i -v "$(pwd)/.hadolint.yaml:/.hadolint.yaml" \
+  hadolint/hadolint@sha256:32dac94127fd60b7b7e3fbfc65e1383b9b5e25c9bfd7b8536de7a539fe68a12d < Dockerfile
 
 bun run format:check       # prettier --check, add --write to fix
 bun run lint:md
@@ -76,8 +81,12 @@ bun run lint:mechanics     # ltex-cli-plus
   fake `Runner` instead of a live network call.
 - `internal/confirm` is the interactive yes/no prompt, with the reader and
   writer injectable for tests.
-- `cmd/forgejo-mirror-sync/main.go` wires the four together and owns the
-  flags.
+- `internal/config` holds the settings' shape, defaults and validation,
+  and `init`'s starter-file writer — no cobra, no viper, nothing about
+  where a value came from. That layering (flags > env > file > defaults)
+  lives in `cmd/forgejo-mirror-sync/main.go` itself, wired through viper.
+- `cmd/forgejo-mirror-sync/main.go` wires every package listed here
+  together and owns the cobra command tree.
 
 ## No PII in output
 

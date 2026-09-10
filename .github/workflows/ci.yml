@@ -88,6 +88,32 @@ jobs:
           go-version-file: go.mod
       - run: go build ./...
 
+  dockerfile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: hadolint
+        # The same pinned digest the pre-commit hook runs, so the two
+        # cannot disagree about the version.
+        run: >-
+          docker run --rm -i
+          -v ${{ github.workspace }}/.hadolint.yaml:/.hadolint.yaml
+          hadolint/hadolint@sha256:32dac94127fd60b7b7e3fbfc65e1383b9b5e25c9bfd7b8536de7a539fe68a12d
+          < Dockerfile
+
+  # Proves the image still builds before anyone merges, without
+  # publishing anything — the release job is the one that pushes to GHCR.
+  docker:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - run: ./scripts/docker-build-check.sh ci-check
+
   # No check-only flag on `go mod edit -fmt`, so this is the pre-commit
   # fixer's twin from lefthook.yml: run it again and diff. `go mod tidy
   # -diff` is the broader check beside it — a stale require, a

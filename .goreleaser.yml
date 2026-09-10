@@ -10,9 +10,10 @@ builds:
   - main: ./cmd/forgejo-mirror-sync
     env:
       - CGO_ENABLED=0
-    # Run by hand on whatever machine has `gh` and `tea` set up, not in a
-    # container — so the matrix covers where that actually is, not just
-    # linux.
+    # Run by hand on whatever machine has `gh` and `tea` set up — so the
+    # native-binary matrix covers where that actually is, not just linux.
+    # The Docker image below is the separate, container-shaped path;
+    # it bundles its own gh/tea rather than assuming the host has them.
     goos:
       - linux
       - darwin
@@ -33,6 +34,17 @@ archives:
 
 checksum:
   name_template: checksums.txt
+
+# linux/amd64 only: the Dockerfile bundles pinned gh/tea binaries for that
+# one architecture. arm64 is a real gap, not an oversight — see the
+# Dockerfile's own comment and the repo's issue tracker.
+dockers:
+  - image_templates:
+      - "ghcr.io/alrayyes/forgejo-mirror-sync:{{ .Tag }}"
+      - "ghcr.io/alrayyes/forgejo-mirror-sync:latest"
+    dockerfile: Dockerfile
+    goos: linux
+    goarch: amd64
 
 # release-please already wrote the notes, curated from the same commits, and
 # created the release carrying them. A second shortlog generated here would
