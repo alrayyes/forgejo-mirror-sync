@@ -1,0 +1,8 @@
+# OpenSpec's own artifact templates open each file with a level-2 heading
+# ("## Why", "## Context", "## Purpose", "## 1. <task group>") — the level-1
+# heading MD041 wants lives one directory up, on the change's own README.md.
+# Fighting the tool's generated shape here would mean hand-editing every
+# proposal/design/tasks/spec file against what `openspec new`/`openspec
+# archive` actually produce.
+config:
+  MD041: false
