@@ -62,6 +62,14 @@ unarchived
 dotfiles
 envs?
 mirror-github-to-forgejo
+forgejo-mirror-sync
+cli-configuration-conventions
+buildx
+glibc
+passwd
+homelab
+subcommand
+gh
 CI
 YAML
 JSON

@@ -46,8 +46,17 @@
       "proselint",
       "ruleset",
       "rulesets",
+      "buildx",
+      "cli-configuration-conventions",
+      "filesystem",
       "forgejo-mirror-sync",
+      "glibc",
+      "goreleaser-built",
+      "homelab",
+      "init",
+      "passwd",
       "shortlog",
+      "subcommand",
       "testify",
       "toolchain",
       "toolchains",
@@ -69,7 +78,8 @@
       "PREPOSITION_VERB",
       "COMMA_COMPOUND_SENTENCE",
       "COMMA_COMPOUND_SENTENCE_2",
-      "OXFORD_SPELLING_Z_NOT_S"
+      "OXFORD_SPELLING_Z_NOT_S",
+      "NO_NOT"
     ]
   }
 }
