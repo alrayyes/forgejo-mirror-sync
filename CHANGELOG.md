@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/alrayyes/forgejo-mirror-sync/compare/v0.3.0...v0.3.1) (2026-09-10)
+
+
+### Bug Fixes
+
+* **ci:** report_type is underscore-separated, not report-type ([#17](https://github.com/alrayyes/forgejo-mirror-sync/issues/17)) ([d6d18c6](https://github.com/alrayyes/forgejo-mirror-sync/commit/d6d18c62b5b8cb9181550b9b95f31f977ef658aa))
+
 ## [0.3.0](https://github.com/alrayyes/forgejo-mirror-sync/compare/v0.2.0...v0.3.0) (2026-09-10)
 
 
