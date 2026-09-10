@@ -2,16 +2,19 @@
 
 ## Getting set up
 
-- **Go 1.25 or newer.**
+- **Go 1.25 or newer**, for writing and building the code itself — the
+  hooks below don't need it on your `PATH`.
+- **Docker.** `gofmt`, `golangci-lint`, `go mod edit -fmt`,
+  `go mod tidy -diff` and `go test` all run inside pinned images
+  (`scripts/go-docker.sh`, `scripts/golangci-lint-docker.sh`) rather than
+  whatever your host happens to have — a host `go`/`golangci-lint` pair
+  can drift out of sync with each other, or with what `go.mod` declares,
+  independently of anything in this repo. `rules/go-mod.md`,
+  `rules/go-lint.md`.
 - **[bun](https://bun.sh)** for the tooling that isn't Go — commitlint,
   Prettier, markdownlint, and the [lefthook](https://lefthook.dev) that runs
   the git hooks. There's a `package.json`, but nothing here is JavaScript;
   it exists only so those tools resolve and stay pinned.
-- **[golangci-lint](https://golangci-lint.run) v2.13.1**, which the
-  pre-commit hook runs from your `PATH` while CI runs it pinned. Install
-  that version rather than whichever is current: when the two disagree, the
-  hook passes and the pipeline fails, and the reason isn't obvious from the
-  failure.
 - **[Vale](https://vale.sh)** on your `PATH`, for the style tier of the
   prose lint:
 
@@ -43,14 +46,15 @@ Every one of these is what a hook or CI runs — see `lefthook.yml` and
 `.github/workflows/*.yml` for exactly which.
 
 ```sh
-go build ./...
+go build ./...              # host go — nothing to pin, doesn't need a matched version
 go vet ./...
-go test ./...
-go test -race -coverprofile=coverage.out -coverpkg=./... ./... && go tool cover -func=coverage.out
-go tool gotestsum --junitfile junit.xml -- -race -coverprofile=coverage.out -coverpkg=./... ./...  # what CI runs, for the JUnit report Codecov Test Analytics reads
-golangci-lint run
-golangci-lint fmt          # the fixer; `run` stays the check
-go mod tidy -diff          # broader than `go mod edit -fmt`: catches a stale require too
+
+./scripts/go-docker.sh go test ./...
+./scripts/go-docker.sh go test -race -coverprofile=coverage.out -coverpkg=./... ./... && go tool cover -func=coverage.out
+./scripts/go-docker.sh go tool gotestsum --junitfile junit.xml -- -race -coverprofile=coverage.out -coverpkg=./... ./...  # what CI runs, for the JUnit report Codecov Test Analytics reads
+./scripts/golangci-lint-docker.sh golangci-lint run ./...
+./scripts/golangci-lint-docker.sh golangci-lint fmt ./...   # the fixer; `run` stays the check
+./scripts/go-docker.sh go mod tidy -diff   # broader than `go mod edit -fmt`: catches a stale require too
 govulncheck ./...
 goreleaser check
 

@@ -8,14 +8,21 @@
 # commit should not fail over a quote style a tool can settle by itself.
 pre-commit:
   jobs:
+    # Both run through the pinned golang/golangci-lint images
+    # (scripts/go-docker.sh, scripts/golangci-lint-docker.sh) rather than
+    # the host binary — a host `go`/`golangci-lint` pair can drift
+    # independently via the OS package manager, and pinning the image to
+    # go.mod's own `go` directive makes the hook's toolchain version a
+    # property of the repo, not the machine running it. rules/go-mod.md,
+    # rules/go-lint.md.
     - name: gofmt
       glob: "*.go"
-      run: gofmt -w {staged_files}
+      run: ./scripts/go-docker.sh gofmt -w {staged_files}
       stage_fixed: true
 
     - name: golangci-lint
       glob: "*.go"
-      run: golangci-lint run ./...
+      run: ./scripts/golangci-lint-docker.sh golangci-lint run ./...
 
     # go mod edit -fmt is the canonicalizer for go.mod itself: a builtin `go`
     # subcommand, not gofmt (which never touches go.mod) and not `go mod tidy`
@@ -23,7 +30,7 @@ pre-commit:
     # doing).
     - name: gomod
       glob: "go.mod"
-      run: go mod edit -fmt go.mod
+      run: ./scripts/go-docker.sh go mod edit -fmt go.mod
       stage_fixed: true
 
     # Prettier decides the layout, markdownlint then judges what Prettier
@@ -65,13 +72,13 @@ pre-push:
   parallel: true
   jobs:
     - name: test
-      run: go test ./...
+      run: ./scripts/go-docker.sh go test ./...
 
     # No check-only flag on `go mod edit -fmt`, so the gate is running it
     # again and diffing. A no-op on a go.mod pre-commit already canonicalized;
     # only fails if that got bypassed.
     - name: gomod
-      run: go mod edit -fmt go.mod && git diff --exit-code go.mod
+      run: ./scripts/go-docker.sh sh -c 'go mod edit -fmt go.mod && git diff --exit-code go.mod'
 
     # Broader than the formatting check above: a stale require, a
     # non-canonical version string, or a go.sum entry for a module nothing
@@ -79,7 +86,7 @@ pre-push:
     # their own. Pre-push/CI only, per go-mod.md: -diff can hit the
     # network on a cold module cache, which is too much for pre-commit.
     - name: gomod-tidy
-      run: go mod tidy -diff
+      run: ./scripts/go-docker.sh go mod tidy -diff
 
     - name: govulncheck
       run: govulncheck ./...
