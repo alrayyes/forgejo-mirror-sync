@@ -4,7 +4,9 @@ Dependabot
 Codecov
 GitHub
 Forgejo
+Forgejo-only
 Gitea
+OpenSpec
 Sigstore
 [Gg]oreleaser
 golangci-lint
@@ -39,6 +41,13 @@ fixups
 repos?
 toolchain
 toolchains
+APIs?
+CLIs?
+hardcoded?
+skippable
+backfilled
+stdin
+unmirrored
 whoever's
 whatever's
 else's
@@ -48,6 +57,9 @@ devDependencies
 erroring
 injectable
 namespaces?
+unarchived
+dotfiles
+mirror-github-to-forgejo
 CI
 YAML
 JSON
