@@ -22,6 +22,11 @@
   `ltex-cli-plus` needs nothing installed: the hook fetches and caches it
   on first use.
 
+- **[`govulncheck`](https://go.dev/doc/tutorial/govulncheck)**:
+  `go install golang.org/x/vuln/cmd/govulncheck@latest`.
+- **[`goreleaser`](https://goreleaser.com)**, for `goreleaser check` — only
+  validates `.goreleaser.yml`, never runs a real release locally.
+
 One command installs the linters and the git hooks:
 
 ```sh
@@ -44,6 +49,9 @@ go test ./...
 go test -race -coverprofile=coverage.out -coverpkg=./... ./... && go tool cover -func=coverage.out
 golangci-lint run
 golangci-lint fmt          # the fixer; `run` stays the check
+go mod tidy -diff          # broader than `go mod edit -fmt`: catches a stale require too
+govulncheck ./...
+goreleaser check
 
 bun run format:check       # prettier --check, add --write to fix
 bun run lint:md

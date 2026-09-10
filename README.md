@@ -6,6 +6,7 @@
 
 [![CI](https://github.com/alrayyes/forgejo-mirror-sync/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/alrayyes/forgejo-mirror-sync/actions/workflows/ci.yml)
 [![Codecov](https://codecov.io/gh/alrayyes/forgejo-mirror-sync/graph/badge.svg)](https://codecov.io/gh/alrayyes/forgejo-mirror-sync)
+[![Go Reference](https://pkg.go.dev/badge/github.com/alrayyes/forgejo-mirror-sync.svg)](https://pkg.go.dev/github.com/alrayyes/forgejo-mirror-sync)
 [![release](https://img.shields.io/github/v/release/alrayyes/forgejo-mirror-sync?sort=semver)](https://github.com/alrayyes/forgejo-mirror-sync/releases/latest)
 [![Licence: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE)
 
@@ -52,10 +53,11 @@ machine it runs on; it never handles a credential itself.
 ## Installation
 
 ```sh
-git clone https://github.com/alrayyes/forgejo-mirror-sync.git
-cd forgejo-mirror-sync
-go build ./cmd/forgejo-mirror-sync
+go install github.com/alrayyes/forgejo-mirror-sync/cmd/forgejo-mirror-sync@latest
 ```
+
+Pin a specific release instead of `@latest` for a reproducible install —
+`@v0.1.0`, say.
 
 ## Usage
 
