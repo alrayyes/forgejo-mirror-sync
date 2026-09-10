@@ -17,10 +17,13 @@ type fakeRunner struct {
 
 func (f *fakeRunner) Run(_ context.Context, name string, args ...string) ([]byte, error) {
 	f.gotArgs = append([]string{name}, args...)
+
 	return f.output, f.err
 }
 
 func TestPublicRepos_ParsesAndFiltersForks(t *testing.T) {
+	t.Parallel()
+
 	fake := &fakeRunner{output: []byte(`[
 		{"name": "widget", "isArchived": false, "isFork": false},
 		{"name": "a-fork", "isArchived": false, "isFork": true},
@@ -38,6 +41,8 @@ func TestPublicRepos_ParsesAndFiltersForks(t *testing.T) {
 }
 
 func TestPublicRepos_RunsExpectedGhCommand(t *testing.T) {
+	t.Parallel()
+
 	fake := &fakeRunner{output: []byte(`[]`)}
 	lister := ghsource.Lister{Runner: fake}
 
@@ -53,6 +58,8 @@ func TestPublicRepos_RunsExpectedGhCommand(t *testing.T) {
 }
 
 func TestPublicRepos_PropagatesRunnerError(t *testing.T) {
+	t.Parallel()
+
 	fake := &fakeRunner{err: assert.AnError}
 	lister := ghsource.Lister{Runner: fake}
 

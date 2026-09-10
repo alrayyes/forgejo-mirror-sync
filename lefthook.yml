@@ -73,6 +73,20 @@ pre-push:
     - name: gomod
       run: go mod edit -fmt go.mod && git diff --exit-code go.mod
 
+    # Broader than the formatting check above: a stale require, a
+    # non-canonical version string, or a go.sum entry for a module nothing
+    # imports anymore — real drift `go build`/`go test` never catch on
+    # their own. Pre-push/CI only, per go-mod.md: -diff can hit the
+    # network on a cold module cache, which is too much for pre-commit.
+    - name: gomod-tidy
+      run: go mod tidy -diff
+
+    - name: govulncheck
+      run: govulncheck ./...
+
+    - name: goreleaser-check
+      run: goreleaser check
+
     # These are `package.json` scripts rather than the commands spelled out,
     # because CI runs the same ones and a literal copied into two files drifts
     # the first time somebody edits one of them.

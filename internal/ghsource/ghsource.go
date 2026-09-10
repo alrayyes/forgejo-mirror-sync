@@ -57,5 +57,6 @@ func (l Lister) PublicRepos(ctx context.Context, owner string) ([]Repo, error) {
 			Archived: r.IsArchived,
 		})
 	}
+
 	return repos, nil
 }

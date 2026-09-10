@@ -11,6 +11,8 @@ import (
 )
 
 func TestAsk_AcceptsY(t *testing.T) {
+	t.Parallel()
+
 	var out bytes.Buffer
 	ok, err := confirm.Ask(&out, strings.NewReader("y\n"), "Proceed?")
 
@@ -20,6 +22,8 @@ func TestAsk_AcceptsY(t *testing.T) {
 }
 
 func TestAsk_AcceptsYes(t *testing.T) {
+	t.Parallel()
+
 	var out bytes.Buffer
 	ok, err := confirm.Ask(&out, strings.NewReader("yes\n"), "Proceed?")
 
@@ -28,6 +32,8 @@ func TestAsk_AcceptsYes(t *testing.T) {
 }
 
 func TestAsk_IsCaseInsensitive(t *testing.T) {
+	t.Parallel()
+
 	var out bytes.Buffer
 	ok, err := confirm.Ask(&out, strings.NewReader("YES\n"), "Proceed?")
 
@@ -36,6 +42,8 @@ func TestAsk_IsCaseInsensitive(t *testing.T) {
 }
 
 func TestAsk_DefaultsToNoOnEmptyInput(t *testing.T) {
+	t.Parallel()
+
 	var out bytes.Buffer
 	ok, err := confirm.Ask(&out, strings.NewReader("\n"), "Proceed?")
 
@@ -44,6 +52,8 @@ func TestAsk_DefaultsToNoOnEmptyInput(t *testing.T) {
 }
 
 func TestAsk_RejectsAnythingElse(t *testing.T) {
+	t.Parallel()
+
 	var out bytes.Buffer
 	ok, err := confirm.Ask(&out, strings.NewReader("n\n"), "Proceed?")
 

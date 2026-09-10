@@ -74,7 +74,11 @@ jobs:
       - run: go build ./...
 
   # No check-only flag on `go mod edit -fmt`, so this is the pre-commit
-  # fixer's twin from lefthook.yml: run it again and diff.
+  # fixer's twin from lefthook.yml: run it again and diff. `go mod tidy
+  # -diff` is the broader check beside it — a stale require, a
+  # non-canonical version string, a go.sum entry nothing imports anymore —
+  # real drift the formatting check above and `go build`/`go test` never
+  # catch on their own.
   gomod:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -85,6 +89,33 @@ jobs:
           go-version-file: go.mod
       - name: go mod edit -fmt
         run: go mod edit -fmt go.mod && git diff --exit-code go.mod
+      - name: go mod tidy -diff
+        run: go mod tidy -diff
+
+  govulncheck:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: golang/govulncheck-action@032d45514ae346b1db93c04b0c90b841c370344f # v1.1.0
+        with:
+          go-version-file: go.mod
+
+  # Validates .goreleaser.yml without running a release, so a typo in the
+  # config surfaces on the pull request that introduced it rather than on
+  # the first real release after.
+  goreleaser-check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
+        with:
+          version: v2.17.1
+          args: check
 
   # Layout and structure. Style and mechanics are prose.yml — see its header
   # comment for why they're split out.
