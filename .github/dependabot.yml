@@ -10,10 +10,6 @@
 # a floating range drifts silently and there's nothing to raise a pull
 # request about.
 #
-# Two pins Dependabot can't see, and which are updated by hand: the base
-# images in the Dockerfile (golang, distroless) and the hadolint image
-# digest in lefthook.yml/ci.yml. All three are digest-pinned and none of them
-# live anywhere Dependabot's ecosystems look.
 version: 2
 
 updates:
