@@ -1,15 +1,22 @@
-package main
+package main_test
 
 import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
 
+	main "github.com/alrayyes/forgejo-mirror-sync/cmd/forgejo-mirror-sync"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+)
+
+var (
+	errSimulated         = errors.New("simulated failure")
+	errUnexpectedCommand = errors.New("unexpected command")
 )
 
 // scriptedRunner fakes exactly the gh/tea calls Run makes, so these tests
@@ -30,6 +37,7 @@ func (s *scriptedRunner) Run(_ context.Context, name string, args ...string) ([]
 	case name == "tea" && len(args) >= 2 && args[0] == "api" && strings.HasPrefix(args[1], "/users/"):
 		out := s.forgejoPages[s.pageIdx]
 		s.pageIdx++
+
 		return out, nil
 	case name == "tea" && len(args) >= 3 && args[1] == "-X" && args[2] == "POST":
 		var body struct {
@@ -37,9 +45,10 @@ func (s *scriptedRunner) Run(_ context.Context, name string, args ...string) ([]
 		}
 		_ = json.Unmarshal([]byte(args[len(args)-1]), &body)
 		if s.failCreate[body.RepoName] {
-			return nil, fmt.Errorf("simulated failure for %s", body.RepoName)
+			return nil, fmt.Errorf("%w: %s", errSimulated, body.RepoName)
 		}
 		s.creates = append(s.creates, body.RepoName)
+
 		return []byte(`{}`), nil
 	case name == "tea" && len(args) >= 3 && args[1] == "-X" && args[2] == "PATCH":
 		var body struct {
@@ -47,9 +56,11 @@ func (s *scriptedRunner) Run(_ context.Context, name string, args ...string) ([]
 		}
 		_ = json.Unmarshal([]byte(args[len(args)-1]), &body)
 		s.patches = append(s.patches, fmt.Sprintf("%s=%v", args[3], body.Archived))
+
 		return []byte(`{}`), nil
 	}
-	return nil, fmt.Errorf("unexpected command: %s %v", name, args)
+
+	return nil, fmt.Errorf("%w: %s %v", errUnexpectedCommand, name, args)
 }
 
 func newScriptedRunner() *scriptedRunner {
@@ -65,10 +76,11 @@ func newScriptedRunner() *scriptedRunner {
 }
 
 func TestRun_DryRunMakesNoWrites(t *testing.T) {
+	t.Parallel()
 	r := newScriptedRunner()
 	var out bytes.Buffer
 
-	err := Run(context.Background(), &out, strings.NewReader(""), r, Options{
+	err := main.Run(context.Background(), &out, strings.NewReader(""), r, main.Options{
 		GitHubOwner: "alrayyes", ForgejoOwner: "alrayyes", DryRun: true,
 	})
 
@@ -79,10 +91,11 @@ func TestRun_DryRunMakesNoWrites(t *testing.T) {
 }
 
 func TestRun_YesSkipsPromptAndWrites(t *testing.T) {
+	t.Parallel()
 	r := newScriptedRunner()
 	var out bytes.Buffer
 
-	err := Run(context.Background(), &out, strings.NewReader(""), r, Options{
+	err := main.Run(context.Background(), &out, strings.NewReader(""), r, main.Options{
 		GitHubOwner: "alrayyes", ForgejoOwner: "alrayyes", Yes: true,
 	})
 
@@ -91,12 +104,29 @@ func TestRun_YesSkipsPromptAndWrites(t *testing.T) {
 	assert.Equal(t, []string{"/repos/alrayyes/widget=true"}, r.patches)
 }
 
-func TestRun_DecliningPromptMakesNoWrites(t *testing.T) {
+func TestRun_NonInteractiveWithNoYesFailsClosed(t *testing.T) {
+	t.Parallel()
 	r := newScriptedRunner()
 	var out bytes.Buffer
 
-	err := Run(context.Background(), &out, strings.NewReader("n\n"), r, Options{
-		GitHubOwner: "alrayyes", ForgejoOwner: "alrayyes",
+	// No stdin to prompt on and no --yes: this must fail loudly rather
+	// than block forever on a read nothing will ever send.
+	err := main.Run(context.Background(), &out, strings.NewReader(""), r, main.Options{
+		GitHubOwner: "alrayyes", ForgejoOwner: "alrayyes", Interactive: false,
+	})
+
+	require.Error(t, err)
+	assert.Empty(t, r.creates)
+	assert.Empty(t, r.patches)
+}
+
+func TestRun_DecliningPromptMakesNoWrites(t *testing.T) {
+	t.Parallel()
+	r := newScriptedRunner()
+	var out bytes.Buffer
+
+	err := main.Run(context.Background(), &out, strings.NewReader("n\n"), r, main.Options{
+		GitHubOwner: "alrayyes", ForgejoOwner: "alrayyes", Interactive: true,
 	})
 
 	require.NoError(t, err)
@@ -106,11 +136,12 @@ func TestRun_DecliningPromptMakesNoWrites(t *testing.T) {
 }
 
 func TestRun_AcceptingPromptWrites(t *testing.T) {
+	t.Parallel()
 	r := newScriptedRunner()
 	var out bytes.Buffer
 
-	err := Run(context.Background(), &out, strings.NewReader("y\n"), r, Options{
-		GitHubOwner: "alrayyes", ForgejoOwner: "alrayyes",
+	err := main.Run(context.Background(), &out, strings.NewReader("y\n"), r, main.Options{
+		GitHubOwner: "alrayyes", ForgejoOwner: "alrayyes", Interactive: true,
 	})
 
 	require.NoError(t, err)
@@ -119,6 +150,7 @@ func TestRun_AcceptingPromptWrites(t *testing.T) {
 }
 
 func TestRun_VerboseLogsSkipReasons(t *testing.T) {
+	t.Parallel()
 	r := &scriptedRunner{
 		ghOutput: []byte(`[{"name": "old-thing", "isArchived": true, "isFork": false}]`),
 		forgejoPages: [][]byte{
@@ -127,7 +159,7 @@ func TestRun_VerboseLogsSkipReasons(t *testing.T) {
 	}
 	var out bytes.Buffer
 
-	err := Run(context.Background(), &out, strings.NewReader(""), r, Options{
+	err := main.Run(context.Background(), &out, strings.NewReader(""), r, main.Options{
 		GitHubOwner: "alrayyes", ForgejoOwner: "alrayyes", DryRun: true, Verbose: true,
 	})
 
@@ -137,6 +169,7 @@ func TestRun_VerboseLogsSkipReasons(t *testing.T) {
 }
 
 func TestRun_ReportsFailedActionsWithoutStoppingTheRest(t *testing.T) {
+	t.Parallel()
 	r := &scriptedRunner{
 		ghOutput: []byte(`[
 			{"name": "will-fail", "isArchived": false, "isFork": false},
@@ -147,7 +180,7 @@ func TestRun_ReportsFailedActionsWithoutStoppingTheRest(t *testing.T) {
 	}
 	var out bytes.Buffer
 
-	err := Run(context.Background(), &out, strings.NewReader(""), r, Options{
+	err := main.Run(context.Background(), &out, strings.NewReader(""), r, main.Options{
 		GitHubOwner: "alrayyes", ForgejoOwner: "alrayyes", Yes: true, Verbose: true,
 	})
 
@@ -157,6 +190,7 @@ func TestRun_ReportsFailedActionsWithoutStoppingTheRest(t *testing.T) {
 }
 
 func TestRun_NothingToDoSkipsPrompt(t *testing.T) {
+	t.Parallel()
 	r := &scriptedRunner{
 		ghOutput:     []byte(`[{"name": "widget", "isArchived": false, "isFork": false}]`),
 		forgejoPages: [][]byte{[]byte(`[{"name": "widget", "mirror": true, "archived": false}]`)},
@@ -165,7 +199,7 @@ func TestRun_NothingToDoSkipsPrompt(t *testing.T) {
 
 	// No stdin available to read from — if this tried to prompt, it would
 	// block or error rather than return cleanly.
-	err := Run(context.Background(), &out, strings.NewReader(""), r, Options{
+	err := main.Run(context.Background(), &out, strings.NewReader(""), r, main.Options{
 		GitHubOwner: "alrayyes", ForgejoOwner: "alrayyes",
 	})
 

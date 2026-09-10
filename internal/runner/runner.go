@@ -36,7 +36,9 @@ func (Exec) Run(ctx context.Context, name string, args ...string) ([]byte, error
 
 	if err := cmd.Run(); err != nil {
 		firstLine, _, _ := strings.Cut(strings.TrimSpace(stderr.String()), "\n")
+
 		return nil, fmt.Errorf("%s: %w: %s", name, err, firstLine)
 	}
+
 	return stdout.Bytes(), nil
 }

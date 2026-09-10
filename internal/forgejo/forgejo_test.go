@@ -29,10 +29,13 @@ func (f *fakeRunner) Run(_ context.Context, name string, args ...string) ([]byte
 	}
 	c := f.calls[f.next]
 	f.next++
+
 	return c.output, c.err
 }
 
 func TestRepos_PaginatesUntilAShortPage(t *testing.T) {
+	t.Parallel()
+
 	page1 := make([]map[string]any, 50)
 	for i := range page1 {
 		page1[i] = map[string]any{"name": "repo", "mirror": true, "archived": false}
@@ -58,6 +61,8 @@ func TestRepos_PaginatesUntilAShortPage(t *testing.T) {
 }
 
 func TestRepos_StopsOnFirstEmptyPage(t *testing.T) {
+	t.Parallel()
+
 	fake := &fakeRunner{calls: []call{{output: []byte(`[]`)}}}
 	client := forgejo.Client{Runner: fake}
 
@@ -69,6 +74,8 @@ func TestRepos_StopsOnFirstEmptyPage(t *testing.T) {
 }
 
 func TestCreateMirror_RunsExpectedTeaCommand(t *testing.T) {
+	t.Parallel()
+
 	fake := &fakeRunner{calls: []call{{output: []byte(`{}`)}}}
 	client := forgejo.Client{Runner: fake}
 
@@ -89,6 +96,8 @@ func TestCreateMirror_RunsExpectedTeaCommand(t *testing.T) {
 }
 
 func TestSetArchived_RunsExpectedTeaCommand(t *testing.T) {
+	t.Parallel()
+
 	fake := &fakeRunner{calls: []call{{output: []byte(`{}`)}}}
 	client := forgejo.Client{Runner: fake}
 
@@ -104,6 +113,8 @@ func TestSetArchived_RunsExpectedTeaCommand(t *testing.T) {
 }
 
 func TestCreateMirror_PropagatesRunnerError(t *testing.T) {
+	t.Parallel()
+
 	fake := &fakeRunner{calls: []call{{err: assert.AnError}}}
 	client := forgejo.Client{Runner: fake}
 

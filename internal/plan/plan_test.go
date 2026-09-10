@@ -9,6 +9,8 @@ import (
 )
 
 func TestCompute_MissingMirrorIsCreated(t *testing.T) {
+	t.Parallel()
+
 	github := []plan.GitHubRepo{
 		{Name: "widget", CloneURL: "https://github.com/alrayyes/widget.git", Archived: false},
 	}
@@ -24,6 +26,8 @@ func TestCompute_MissingMirrorIsCreated(t *testing.T) {
 }
 
 func TestCompute_ArchivedGitHubRepoWithNoMirrorIsSkipped(t *testing.T) {
+	t.Parallel()
+
 	// Already settled — not worth mirroring for the first time.
 	github := []plan.GitHubRepo{
 		{Name: "old-thing", CloneURL: "https://github.com/alrayyes/old-thing.git", Archived: true},
@@ -38,6 +42,8 @@ func TestCompute_ArchivedGitHubRepoWithNoMirrorIsSkipped(t *testing.T) {
 }
 
 func TestCompute_NonMirrorSameNameRepoIsSkipped(t *testing.T) {
+	t.Parallel()
+
 	// A scaffold's GitHub-native sibling, or any other deliberately
 	// independent repo sharing a name — never overwritten.
 	github := []plan.GitHubRepo{
@@ -57,6 +63,8 @@ func TestCompute_NonMirrorSameNameRepoIsSkipped(t *testing.T) {
 }
 
 func TestCompute_ArchivedMismatchOnExistingMirrorIsFixed(t *testing.T) {
+	t.Parallel()
+
 	github := []plan.GitHubRepo{
 		{Name: "widget", Archived: true},
 	}
@@ -74,6 +82,8 @@ func TestCompute_ArchivedMismatchOnExistingMirrorIsFixed(t *testing.T) {
 }
 
 func TestCompute_UnarchivedMismatchOnExistingMirrorIsFixed(t *testing.T) {
+	t.Parallel()
+
 	github := []plan.GitHubRepo{
 		{Name: "widget", Archived: false},
 	}
@@ -89,6 +99,8 @@ func TestCompute_UnarchivedMismatchOnExistingMirrorIsFixed(t *testing.T) {
 }
 
 func TestCompute_MatchingMirrorIsLeftAlone(t *testing.T) {
+	t.Parallel()
+
 	github := []plan.GitHubRepo{
 		{Name: "widget", Archived: true},
 	}
@@ -104,6 +116,8 @@ func TestCompute_MatchingMirrorIsLeftAlone(t *testing.T) {
 }
 
 func TestCompute_ExtraForgejoRepoIsIgnored(t *testing.T) {
+	t.Parallel()
+
 	// A repo that only exists on Forgejo isn't this tool's business — it
 	// might be hand-created, or mirror a GitHub repo that's since gone
 	// private or been deleted. Never touched either way.
@@ -116,6 +130,8 @@ func TestCompute_ExtraForgejoRepoIsIgnored(t *testing.T) {
 }
 
 func TestCompute_IsDeterministicallyOrdered(t *testing.T) {
+	t.Parallel()
+
 	github := []plan.GitHubRepo{
 		{Name: "zeta", Archived: false},
 		{Name: "alpha", Archived: false},

@@ -56,6 +56,7 @@ func (c Client) Repos(ctx context.Context, owner string) ([]Repo, error) {
 			break
 		}
 	}
+
 	return all, nil
 }
 
@@ -78,6 +79,7 @@ func (c Client) CreateMirror(ctx context.Context, owner, name, cloneURL string) 
 	if _, err := c.Runner.Run(ctx, "tea", "api", "-X", "POST", "/repos/migrate", "-d", string(body)); err != nil {
 		return fmt.Errorf("creating mirror for %s: %w", name, err)
 	}
+
 	return nil
 }
 
@@ -92,5 +94,6 @@ func (c Client) SetArchived(ctx context.Context, owner, name string, archived bo
 	if _, err := c.Runner.Run(ctx, "tea", "api", "-X", "PATCH", path, "-d", string(body)); err != nil {
 		return fmt.Errorf("setting archived=%v for %s: %w", archived, name, err)
 	}
+
 	return nil
 }

@@ -10,6 +10,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -20,18 +21,28 @@ import (
 	"github.com/alrayyes/forgejo-mirror-sync/internal/ghsource"
 	"github.com/alrayyes/forgejo-mirror-sync/internal/plan"
 	"github.com/alrayyes/forgejo-mirror-sync/internal/runner"
+	"golang.org/x/term"
 )
 
 // version is stamped in at build time by goreleaser, from the tag.
 var version = "dev"
 
-// Options are the flags Run acts on.
+var (
+	errNoTerminal    = errors.New("no terminal to confirm on: pass --yes to proceed or --dry-run to only preview")
+	errActionsFailed = errors.New("some actions failed")
+)
+
+// Options are the flags Run acts on. Interactive says whether stdin is a
+// real TTY — set from main, never from a flag — and gates the confirmation
+// prompt: a piped or scripted invocation with no --yes must fail closed
+// rather than block forever on a read nothing will ever send.
 type Options struct {
 	GitHubOwner  string
 	ForgejoOwner string
 	DryRun       bool
 	Yes          bool
 	Verbose      bool
+	Interactive  bool
 }
 
 func main() {
@@ -46,6 +57,7 @@ func main() {
 
 	if *showVersion {
 		fmt.Println(version)
+
 		return
 	}
 
@@ -55,6 +67,7 @@ func main() {
 		DryRun:       *dryRun,
 		Yes:          *yes,
 		Verbose:      *verbose,
+		Interactive:  term.IsTerminal(int(os.Stdin.Fd())),
 	}
 
 	if err := Run(context.Background(), os.Stdout, os.Stdin, runner.Exec{}, opts); err != nil {
@@ -82,15 +95,21 @@ func Run(ctx context.Context, out io.Writer, in io.Reader, r runner.Runner, opts
 
 	if len(result.ToCreate) == 0 && len(result.ToArchiveFix) == 0 {
 		_, _ = fmt.Fprintln(out, "Nothing to do.")
+
 		return nil
 	}
 
 	if opts.DryRun {
 		_, _ = fmt.Fprintln(out, "Dry run: no changes made.")
+
 		return nil
 	}
 
 	if !opts.Yes {
+		if !opts.Interactive {
+			return errNoTerminal
+		}
+
 		prompt := fmt.Sprintf("Create %d mirror(s) and fix %d archived flag(s)?", len(result.ToCreate), len(result.ToArchiveFix))
 		ok, err := confirm.Ask(out, in, prompt)
 		if err != nil {
@@ -98,6 +117,7 @@ func Run(ctx context.Context, out io.Writer, in io.Reader, r runner.Runner, opts
 		}
 		if !ok {
 			_, _ = fmt.Fprintln(out, "Aborted: no changes made.")
+
 			return nil
 		}
 	}
@@ -115,6 +135,7 @@ func apply(ctx context.Context, out io.Writer, client forgejo.Client, opts Optio
 		if err := client.CreateMirror(ctx, opts.ForgejoOwner, c.Name, c.CloneURL); err != nil {
 			_, _ = fmt.Fprintf(out, "  failed to create mirror for %s: %v\n", c.Name, err)
 			failures++
+
 			continue
 		}
 		_, _ = fmt.Fprintf(out, "  created mirror: %s\n", c.Name)
@@ -127,14 +148,16 @@ func apply(ctx context.Context, out io.Writer, client forgejo.Client, opts Optio
 		if err := client.SetArchived(ctx, opts.ForgejoOwner, f.Name, f.WantArchived); err != nil {
 			_, _ = fmt.Fprintf(out, "  failed to set archived=%v for %s: %v\n", f.WantArchived, f.Name, err)
 			failures++
+
 			continue
 		}
 		_, _ = fmt.Fprintf(out, "  archived=%v: %s\n", f.WantArchived, f.Name)
 	}
 
 	if failures > 0 {
-		return fmt.Errorf("%d action(s) failed", failures)
+		return fmt.Errorf("%w: %d", errActionsFailed, failures)
 	}
+
 	return nil
 }
 
@@ -165,6 +188,7 @@ func toPlanGitHub(repos []ghsource.Repo) []plan.GitHubRepo {
 	for i, r := range repos {
 		out[i] = plan.GitHubRepo{Name: r.Name, CloneURL: r.CloneURL, Archived: r.Archived}
 	}
+
 	return out
 }
 
@@ -173,5 +197,6 @@ func toPlanForgejo(repos []forgejo.Repo) []plan.ForgejoRepo {
 	for i, r := range repos {
 		out[i] = plan.ForgejoRepo{Name: r.Name, IsMirror: r.IsMirror, Archived: r.Archived}
 	}
+
 	return out
 }
