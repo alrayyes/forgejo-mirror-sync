@@ -6,36 +6,54 @@
 // It shells out to gh and tea for everything — see internal/runner's
 // package doc for why: neither of those credentials is ever something this
 // program itself handles.
+//
+// Configuration layers flags over environment variables
+// (FORGEJO_MIRROR_SYNC_*) over an XDG config file over built-in defaults —
+// see internal/config's package doc for the file's shape, and `init`
+// below for how one gets written.
 package main
 
 import (
 	"context"
 	"errors"
-	"flag"
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
+	"github.com/adrg/xdg"
+	"github.com/alrayyes/forgejo-mirror-sync/internal/config"
 	"github.com/alrayyes/forgejo-mirror-sync/internal/confirm"
 	"github.com/alrayyes/forgejo-mirror-sync/internal/forgejo"
 	"github.com/alrayyes/forgejo-mirror-sync/internal/ghsource"
 	"github.com/alrayyes/forgejo-mirror-sync/internal/plan"
 	"github.com/alrayyes/forgejo-mirror-sync/internal/runner"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"golang.org/x/term"
 )
 
 // version is stamped in at build time by goreleaser, from the tag.
 var version = "dev"
 
+// envPrefix is the prefix every config setting's environment variable
+// carries — FORGEJO_MIRROR_SYNC_GITHUB_OWNER, and so on.
+const envPrefix = "FORGEJO_MIRROR_SYNC"
+
+// configRelPath is this tool's config file, relative to an XDG config
+// directory.
+const configRelPath = "forgejo-mirror-sync/config.yaml"
+
 var (
 	errNoTerminal    = errors.New("no terminal to confirm on: pass --yes to proceed or --dry-run to only preview")
 	errActionsFailed = errors.New("some actions failed")
 )
 
-// Options are the flags Run acts on. Interactive says whether stdin is a
-// real TTY — set from main, never from a flag — and gates the confirmation
-// prompt: a piped or scripted invocation with no --yes must fail closed
-// rather than block forever on a read nothing will ever send.
+// Options are the fully-resolved settings Run acts on — flags, env vars
+// and the config file already layered into one value. Interactive says
+// whether stdin is a real TTY — set from main, never from a flag — and
+// gates every prompt: a piped or scripted invocation with no --yes must
+// fail closed rather than block forever on a read nothing will ever send.
 type Options struct {
 	GitHubOwner  string
 	ForgejoOwner string
@@ -46,34 +64,193 @@ type Options struct {
 }
 
 func main() {
-	githubOwner := flag.String("github-owner", "alrayyes", "GitHub account to read public repos from")
-	forgejoOwner := flag.String("forgejo-owner", "alrayyes", "Forgejo namespace mirrors live under")
-	dryRun := flag.Bool("dry-run", false, "Print the plan and exit; never prompts, never writes")
-	yes := flag.Bool("yes", false, "Skip the confirmation prompt")
-	flag.BoolVar(yes, "y", false, "Shorthand for --yes")
-	verbose := flag.Bool("verbose", false, "Log why each repo was skipped and the exact API calls made")
-	showVersion := flag.Bool("version", false, "Print the version and exit")
-	flag.Parse()
-
-	if *showVersion {
-		fmt.Println(version)
-
-		return
-	}
-
-	opts := Options{
-		GitHubOwner:  *githubOwner,
-		ForgejoOwner: *forgejoOwner,
-		DryRun:       *dryRun,
-		Yes:          *yes,
-		Verbose:      *verbose,
-		Interactive:  term.IsTerminal(int(os.Stdin.Fd())),
-	}
-
-	if err := Run(context.Background(), os.Stdout, os.Stdin, runner.Exec{}, opts); err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, "error:", err)
+	if err := newRootCmd().Execute(); err != nil {
 		os.Exit(1)
 	}
+}
+
+func newRootCmd() *cobra.Command {
+	v := viper.New()
+
+	cmd := &cobra.Command{
+		Use:           "forgejo-mirror-sync",
+		Short:         "Mirror public GitHub repos to Forgejo and keep archived state in sync",
+		Version:       version,
+		SilenceUsage:  true,
+		SilenceErrors: false,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return runRoot(cmd, v)
+		},
+	}
+
+	cmd.Flags().String("github-owner", config.DefaultGitHubOwner, "GitHub account to read public repos from")
+	cmd.Flags().String("forgejo-owner", config.DefaultForgejoOwner, "Forgejo namespace mirrors live under")
+	cmd.Flags().Bool("dry-run", false, "Print the plan and exit; never prompts, never writes")
+	cmd.Flags().BoolP("yes", "y", false, "Skip confirmation prompts, and write a missing config non-interactively")
+	cmd.Flags().Bool("verbose", false, "Log why each repo was skipped and the exact API calls made")
+
+	bindConfig(v, cmd)
+	cmd.AddCommand(newInitCmd())
+
+	return cmd
+}
+
+// bindConfig wires viper's three layers — flags, environment, defaults —
+// together. The config file layer is read separately in runRoot, since it
+// depends on whether one actually exists.
+func bindConfig(v *viper.Viper, cmd *cobra.Command) {
+	v.SetEnvPrefix(envPrefix)
+	v.AutomaticEnv()
+
+	for key, flag := range map[string]string{
+		"github_owner":  "github-owner",
+		"forgejo_owner": "forgejo-owner",
+		"dry_run":       "dry-run",
+		"yes":           "yes",
+		"verbose":       "verbose",
+	} {
+		_ = v.BindPFlag(key, cmd.Flags().Lookup(flag))
+	}
+
+	v.SetDefault("github_owner", config.DefaultGitHubOwner)
+	v.SetDefault("forgejo_owner", config.DefaultForgejoOwner)
+}
+
+func runRoot(cmd *cobra.Command, v *viper.Viper) error {
+	configPath, configExists, err := readConfigFile(v)
+	if err != nil {
+		return err
+	}
+
+	opts, err := LoadOptions(v)
+	if err != nil {
+		return err
+	}
+	opts.Interactive = term.IsTerminal(int(os.Stdin.Fd()))
+
+	out := cmd.OutOrStdout()
+	if err := MaybeOfferInit(out, cmd.InOrStdin(), configPath, configExists, relevantEnvSet(), opts.Interactive, opts.Yes); err != nil {
+		return err
+	}
+
+	return Run(cmd.Context(), out, cmd.InOrStdin(), runner.Exec{}, opts)
+}
+
+// readConfigFile locates forgejo-mirror-sync's config file under the XDG
+// config search path and, if one exists, reads it into v. It always
+// returns the path a config file would live at in the primary XDG config
+// directory — for display, and for maybeOfferInit to write to — regardless
+// of whether one was found.
+func readConfigFile(v *viper.Viper) (path string, exists bool, err error) {
+	displayPath := filepath.Join(xdg.ConfigHome, configRelPath)
+
+	found, searchErr := xdg.SearchConfigFile(configRelPath)
+	if searchErr != nil {
+		return displayPath, false, nil
+	}
+
+	v.SetConfigFile(found)
+	if err := v.ReadInConfig(); err != nil {
+		return found, true, fmt.Errorf("reading config file %s: %w", found, err)
+	}
+
+	return found, true, nil
+}
+
+func relevantEnvSet() bool {
+	for _, key := range []string{"GITHUB_OWNER", "FORGEJO_OWNER", "DRY_RUN", "YES", "VERBOSE"} {
+		if _, ok := os.LookupEnv(envPrefix + "_" + key); ok {
+			return true
+		}
+	}
+
+	return false
+}
+
+// LoadOptions reads v's already-layered flag/env/default values into an
+// Options and validates it. v is expected to already have the config file
+// layer read in, if one was found.
+func LoadOptions(v *viper.Viper) (Options, error) {
+	opts := Options{
+		GitHubOwner:  v.GetString("github_owner"),
+		ForgejoOwner: v.GetString("forgejo_owner"),
+		DryRun:       v.GetBool("dry_run"),
+		Yes:          v.GetBool("yes"),
+		Verbose:      v.GetBool("verbose"),
+	}
+
+	cfg := config.Config{GitHubOwner: opts.GitHubOwner, ForgejoOwner: opts.ForgejoOwner}
+	if err := cfg.Validate(); err != nil {
+		return Options{}, fmt.Errorf("invalid configuration: %w", err)
+	}
+
+	return opts, nil
+}
+
+func newInitCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "init",
+		Short: "Write a starter config file",
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			path, err := xdg.ConfigFile(configRelPath)
+			if err != nil {
+				return fmt.Errorf("resolving config path: %w", err)
+			}
+
+			if err := config.WriteDefaultFile(path); err != nil {
+				return fmt.Errorf("writing config: %w", err)
+			}
+
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Wrote %s\n", path)
+
+			return nil
+		},
+	}
+}
+
+// MaybeOfferInit is the first-run prompt: an unconfigured run (no file, no
+// relevant env var) is exactly the moment someone needs pointing at
+// `init`, not left to find it in --help — but only until a config file
+// exists; after that this is a no-op every time.
+func MaybeOfferInit(out io.Writer, in io.Reader, path string, configExists, envSet, interactive, yes bool) error {
+	if configExists || envSet {
+		return nil
+	}
+
+	if yes {
+		if err := writeDefaultConfig(out, path, "No config file found — wrote defaults to %s.\n"); err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	if !interactive {
+		_, _ = fmt.Fprintf(out, "No config file found; run %q to create one. Continuing on built-in defaults.\n", "forgejo-mirror-sync init")
+
+		return nil
+	}
+
+	ok, err := confirm.Ask(out, in, fmt.Sprintf("No config file found. Write one with today's defaults to %s?", path))
+	if err != nil {
+		return fmt.Errorf("reading confirmation: %w", err)
+	}
+
+	if !ok {
+		return nil
+	}
+
+	return writeDefaultConfig(out, path, "Wrote %s.\n")
+}
+
+func writeDefaultConfig(out io.Writer, path, format string) error {
+	if err := config.WriteDefaultFile(path); err != nil && !errors.Is(err, config.ErrConfigExists) {
+		return fmt.Errorf("writing default config: %w", err)
+	}
+
+	_, _ = fmt.Fprintf(out, format, path)
+
+	return nil
 }
 
 // Run does the actual work: list both sides, compute the plan, print it,

@@ -52,6 +52,7 @@ whoever's
 whatever's
 else's
 bot's
+README's
 config
 devDependencies
 erroring
@@ -59,6 +60,7 @@ injectable
 namespaces?
 unarchived
 dotfiles
+envs?
 mirror-github-to-forgejo
 CI
 YAML

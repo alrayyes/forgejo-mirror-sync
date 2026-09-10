@@ -1,0 +1,13 @@
+# hadolint catches an unpinned base image, a RUN that quietly does
+# nothing, the mechanics a Dockerfile review would otherwise have to check
+# by eye.
+failure-threshold: warning
+
+ignored:
+  # ca-certificates/curl/xz-utils have no exact version pinned. Debian's
+  # own mirror doesn't retain old package versions the way a lockfile
+  # does (dependencies.md's "OS package mirrors don't retain old versions"
+  # point) — an exact pin here goes stale and breaks the build, not stays
+  # reproducible. gh and tea themselves, the two things this image
+  # actually needs pinned, are pinned by version and checksum instead.
+  - DL3008
