@@ -50,6 +50,19 @@ machine it runs on; it never handles a credential itself.
   authenticated against git.higherlearning.eu with write access to your
   own namespace there.
 
+## Reports
+
+Every push to `main` with a green pipeline publishes its reports:
+
+- [Test results][tests] (JUnit XML)
+- [Coverage][coverage] (HTML), with the [Cobertura XML][cobertura], and the
+  [Go cover profile][profile]
+
+[tests]: https://apis.ryankes.eu/forgejo-mirror-sync/reports/tests/unit.xml
+[coverage]: https://apis.ryankes.eu/forgejo-mirror-sync/reports/coverage/
+[cobertura]: https://apis.ryankes.eu/forgejo-mirror-sync/reports/coverage/coverage.xml
+[profile]: https://apis.ryankes.eu/forgejo-mirror-sync/reports/coverage/coverage.out
+
 ## Installation
 
 ```sh

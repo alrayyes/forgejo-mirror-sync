@@ -73,3 +73,5 @@ gh
 CI
 YAML
 JSON
+JUnit
+Cobertura
