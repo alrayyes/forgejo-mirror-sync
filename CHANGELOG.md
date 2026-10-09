@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/alrayyes/forgejo-mirror-sync/compare/v0.3.1...v0.4.0) (2026-10-09)
+
+
+### Features
+
+* **ci:** publish test and coverage reports to Pages ([#26](https://github.com/alrayyes/forgejo-mirror-sync/issues/26)) ([5b21cda](https://github.com/alrayyes/forgejo-mirror-sync/commit/5b21cda66f80a853863d3068008cc7cef4d81278))
+
 ## [0.3.1](https://github.com/alrayyes/forgejo-mirror-sync/compare/v0.3.0...v0.3.1) (2026-09-10)
 
 
