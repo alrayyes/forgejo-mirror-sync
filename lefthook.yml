@@ -4,11 +4,14 @@
 # Grows a job here the same PR that adds the tool it runs — a linter with no
 # hook is a linter you only meet at CI.
 
-# pre-commit may write. Let every fixer run and restage what it touched — a
-# commit should not fail over a quote style a tool can settle by itself.
+# pre-commit judges only what the commit contains: every command takes
+# {staged_files} behind a glob. It may write, only to staged files, and
+# stage_fixed restages them — a commit should not fail over a quote style a
+# tool can settle by itself. golangci-lint (type-checks whole packages) and
+# the Docker build can't take a file list, so they run in pre-push and CI.
 pre-commit:
   jobs:
-    # Both run through the pinned golang/golangci-lint images
+    # The Go jobs run through the pinned golang/golangci-lint images
     # (scripts/go-docker.sh, scripts/golangci-lint-docker.sh) rather than
     # the host binary — a host `go`/`golangci-lint` pair can drift
     # independently via the OS package manager, and pinning the image to
@@ -19,10 +22,6 @@ pre-commit:
       glob: "*.go"
       run: ./scripts/go-docker.sh gofmt -w {staged_files}
       stage_fixed: true
-
-    - name: golangci-lint
-      glob: "*.go"
-      run: ./scripts/golangci-lint-docker.sh golangci-lint run ./...
 
     # go mod edit -fmt is the canonicalizer for go.mod itself: a builtin `go`
     # subcommand, not gofmt (which never touches go.mod) and not `go mod tidy`
@@ -66,17 +65,6 @@ pre-commit:
         hadolint/hadolint@sha256:32dac94127fd60b7b7e3fbfc65e1383b9b5e25c9bfd7b8536de7a539fe68a12d
         < Dockerfile
 
-    # Only what the Dockerfile's own COPY pulls in — skipped entirely on
-    # a commit that touches neither, cheap (a warm layer cache) on one
-    # that does.
-    - name: docker-build
-      glob:
-        - "Dockerfile"
-        - "*.go"
-        - "go.mod"
-        - "go.sum"
-      run: ./scripts/docker-build-check.sh pre-commit-check
-
 commit-msg:
   jobs:
     # Resolved from node_modules rather than fetched by bunx: commitlint has to
@@ -95,6 +83,11 @@ pre-push:
   jobs:
     - name: test
       run: ./scripts/go-docker.sh go test ./...
+
+    # Whole packages are type-checked, so there is no staged-files form;
+    # check mode only, never `fmt`. Same command CI runs.
+    - name: golangci-lint
+      run: ./scripts/golangci-lint-docker.sh golangci-lint run ./...
 
     # No check-only flag on `go mod edit -fmt`, so the gate is running it
     # again and diffing. A no-op on a go.mod pre-commit already canonicalized;
@@ -138,7 +131,7 @@ pre-push:
     - name: mechanics
       run: bun run lint:mechanics
 
-    # Unconditional, unlike pre-commit's glob-scoped copy — the check
-    # nothing gets past regardless of what changed, same as `test`.
+    # Unconditional: the check nothing gets past regardless of what changed,
+    # same as `test`. Not in pre-commit, since a build ignores the commit.
     - name: docker-build
       run: ./scripts/docker-build-check.sh pre-push-check

@@ -47,6 +47,11 @@ at the pipeline otherwise, not at the commit.
 Every one of these is what a hook or CI runs — see `lefthook.yml` and
 `.github/workflows/*.yml` for exactly which.
 
+`pre-commit` judges only the staged files, so it runs only tools that take a
+file list, plus hadolint on the Dockerfile. Anything
+that needs the whole tree or a build, such as `golangci-lint run ./...` and
+the Docker build, runs in `pre-push` and CI.
+
 ```sh
 go build ./...              # host go — nothing to pin, doesn't need a matched version
 go vet ./...
