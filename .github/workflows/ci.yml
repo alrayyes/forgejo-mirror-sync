@@ -191,8 +191,12 @@ jobs:
 
   # A hook is something you can skip, and the version number depends on
   # these messages being right, so the whole branch is checked here too.
+  #
+  # Not Dependabot's: it copies the casing of the repo history and writes
+  # "Bump", which subject-case rejects. The squash title is still checked by
+  # pr-title.
   commits:
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && github.actor != 'dependabot[bot]'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
