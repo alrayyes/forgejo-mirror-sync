@@ -72,6 +72,8 @@ jobs:
           go tool cover -func=coverage.out | tail -1 |
             awk '{ print "**Coverage: " $3 "**" }' >> "$GITHUB_STEP_SUMMARY"
       - name: Upload coverage to Codecov
+        # Dependabot runs get no Actions secrets, so the token is empty there.
+        if: github.actor != 'dependabot[bot]'
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -80,7 +82,7 @@ jobs:
         # Runs even on a failed test step — a red PR is exactly what Test
         # Analytics exists to explain, and a job that stops at the first
         # failing test never reaches an upload step gated behind success.
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && github.actor != 'dependabot[bot]' }}
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
