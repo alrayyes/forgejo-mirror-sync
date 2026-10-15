@@ -104,7 +104,7 @@ pre-push:
       run: ./scripts/go-docker.sh go mod tidy -diff
 
     - name: govulncheck
-      run: govulncheck ./...
+      run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
 
     - name: goreleaser-check
       run: goreleaser check
