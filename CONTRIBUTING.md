@@ -27,8 +27,9 @@
   `ltex-cli-plus` needs nothing installed: the hook fetches and caches it
   on first use.
 
-- **[`govulncheck`](https://go.dev/doc/tutorial/govulncheck)**:
-  `go install golang.org/x/vuln/cmd/govulncheck@latest`.
+- **[`govulncheck`](https://go.dev/doc/tutorial/govulncheck)** needs nothing
+  installed: the hook and CI run it with
+  `go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...`.
 - **[`goreleaser`](https://goreleaser.com)**, for `goreleaser check` — only
   validates `.goreleaser.yml`, never runs a real release locally.
 
@@ -62,7 +63,7 @@ go vet ./...
 ./scripts/golangci-lint-docker.sh golangci-lint run ./...
 ./scripts/golangci-lint-docker.sh golangci-lint fmt ./...   # the fixer; `run` stays the check
 ./scripts/go-docker.sh go mod tidy -diff   # broader than `go mod edit -fmt`: catches a stale require too
-govulncheck ./...
+go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
 goreleaser check
 ./scripts/docker-build-check.sh local-check   # proves the shipped image still builds
 docker run --rm -i -v "$(pwd)/.hadolint.yaml:/.hadolint.yaml" \
@@ -73,6 +74,12 @@ bun run lint:md
 bun run lint:prose         # vale
 bun run lint:mechanics     # ltex-cli-plus
 ```
+
+CI's `govulncheck` job differs from the local command in one way: it fails a
+pull request only for vulnerabilities that pull request adds over its base,
+while the local command lists everything. What is already on `main` is tracked
+by `advisory-scan.yml`, which keeps one open `Dependency advisories` issue and
+closes it when the audit is clean. Nothing is ignored.
 
 ## How it fits together
 

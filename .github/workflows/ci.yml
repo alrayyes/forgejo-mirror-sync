@@ -145,14 +145,49 @@ jobs:
       - name: go mod tidy -diff
         run: go mod tidy -diff
 
+  # Works out whether a pull request touched what the audit reads. A skipped job reports
+  # success, so branch protection can still require it; a `paths:` filter on the workflow
+  # would leave it pending forever. A push to main always audits.
+  changes:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      go: ${{ steps.groups.outputs.go }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - id: groups
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          go=true
+          if [ "${EVENT}" = pull_request ] &&
+            ! git diff --name-only "${BASE}...HEAD" |
+              grep -Eq '(\.go$|^go\.(mod|sum)$|^\.github/workflows/ci\.yml$)'; then
+            go=false
+          fi
+          echo "go=${go}" >> "$GITHUB_OUTPUT"
+
+  # Fails only on vulnerabilities this change adds over its base (rules/dependencies.md).
+  # What is already on main is the scan's to track, in advisory-scan.yml. The action retries
+  # a network failure itself and never retries a real finding.
   govulncheck:
+    needs: changes
+    if: needs.changes.outputs.go == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: golang/govulncheck-action@032d45514ae346b1db93c04b0c90b841c370344f # v1.1.0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
+      # Pinned to a main commit of alrayyes/advisory-scan until its first release; re-pin then.
+      - uses: alrayyes/advisory-scan@425418a63e80eb10142fbd2e82127b7ef3a51d68
+        with:
+          mode: gate
+          command: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
 
   # Validates .goreleaser.yml without running a release, so a typo in the
   # config surfaces on the pull request that introduced it rather than on
