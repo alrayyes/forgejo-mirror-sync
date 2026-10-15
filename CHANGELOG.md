@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/alrayyes/forgejo-mirror-sync/compare/v0.4.0...v0.4.1) (2026-10-15)
+
+
+### Bug Fixes
+
+* **ci:** run release-auto-merge when the autorelease label is added ([#41](https://github.com/alrayyes/forgejo-mirror-sync/issues/41)) ([6a694b2](https://github.com/alrayyes/forgejo-mirror-sync/commit/6a694b271c477395097f4fe4cd9aa9601710aebc)), closes [#40](https://github.com/alrayyes/forgejo-mirror-sync/issues/40)
+
 ## [0.4.0](https://github.com/alrayyes/forgejo-mirror-sync/compare/v0.3.1...v0.4.0) (2026-10-09)
 
 
