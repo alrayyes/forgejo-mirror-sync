@@ -37,7 +37,7 @@ machine it runs on; it never handles a credential itself.
 
 ## Requirements
 
-- **Go 1.25 or newer.**
+- **Go 1.26.9 or newer.**
 - **[bun](https://bun.sh)**, for the tooling that isn't Go — commitlint,
   Prettier, markdownlint, and the [lefthook](https://lefthook.dev) that
   runs the git hooks. There's a `package.json`, but nothing here is

@@ -2,7 +2,7 @@
 
 ## Getting set up
 
-- **Go 1.25 or newer**, for writing and building the code itself — the
+- **Go 1.26.9 or newer**, for writing and building the code itself — the
   hooks below don't need it on your `PATH`.
 - **Docker.** `gofmt`, `golangci-lint`, `go mod edit -fmt`,
   `go mod tidy -diff` and `go test` all run inside pinned images
