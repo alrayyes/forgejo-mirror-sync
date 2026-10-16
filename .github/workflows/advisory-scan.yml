@@ -1,6 +1,6 @@
 # The scan half of rules/dependencies.md: audit main and keep one open "Dependency advisories"
 # issue that lists what's there. Daily for advisories published against pins that haven't moved,
-# on a Go push so a merged fix closes the ticket at once, and by hand. An audit that errors
+# on a Go or lockfile push so a merged fix closes the ticket at once, and by hand. An audit that errors
 # (network down) fails the job and leaves the ticket alone.
 name: advisory-scan
 
@@ -13,6 +13,8 @@ on:
       - "**.go"
       - go.mod
       - go.sum
+      - package.json
+      - bun.lock
       - .github/workflows/advisory-scan.yml
   workflow_dispatch:
 
@@ -35,10 +37,40 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
       # Pinned to a main commit of alrayyes/advisory-scan until its first release; re-pin then.
       - uses: alrayyes/advisory-scan@425418a63e80eb10142fbd2e82127b7ef3a51d68
         with:
           mode: scan
-          command: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
+          command: |
+            # Each tool's output is held back and printed only once every tool has run. A tool that
+            # fails without naming an advisory (registry down, build error) makes the wrapper exit
+            # non-zero and print nothing but that error, so another tool's advisory IDs can't hide
+            # it and the ticket is left alone. advisory-scan#8 (multi-command support) will replace
+            # this wrapper.
+            status=0
+            errors=""
+            reports=""
+            run_tool() {
+              out=$("$@" 2>&1) && rc=0 || rc=$?
+              if printf '%s\n' "${out}" | grep -Eq 'GHSA-|CVE-|GO-[0-9]{4}-'; then
+                reports="${reports}${out}"$'\n'
+                [ "${rc}" -eq 0 ] || status=1
+              elif [ "${rc}" -ne 0 ]; then
+                errors="${errors}${out}"$'\n'
+              else
+                reports="${reports}${out}"$'\n'
+              fi
+            }
+            run_tool go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
+            run_tool bun audit
+            if [ -n "${errors}" ]; then
+              printf 'audit tool failed without naming an advisory:\n%s' "${errors}" >&2
+              exit 2
+            fi
+            printf '%s' "${reports}"
+            exit "${status}"
           timeout-seconds: 600
           labels: dependencies

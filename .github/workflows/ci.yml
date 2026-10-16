@@ -153,6 +153,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       go: ${{ steps.groups.outputs.go }}
+      bun: ${{ steps.groups.outputs.bun }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -163,19 +164,23 @@ jobs:
           BASE: ${{ github.event.pull_request.base.sha }}
         run: |
           go=true
-          if [ "${EVENT}" = pull_request ] &&
-            ! git diff --name-only "${BASE}...HEAD" |
-              grep -Eq '(\.go$|^go\.(mod|sum)$|^\.github/workflows/ci\.yml$)'; then
-            go=false
+          bun=true
+          if [ "${EVENT}" = pull_request ]; then
+            # Captured first, so a git failure (missing base) stops the step under bash -e
+            # instead of reading as "nothing changed" and skipping the gates.
+            files=$(git diff --name-only "${BASE}...HEAD")
+            printf '%s\n' "${files}" | grep -Eq '(\.go$|^go\.(mod|sum)$|^\.github/workflows/ci\.yml$)' || go=false
+            printf '%s\n' "${files}" | grep -Eq '^(package\.json|bun\.lock|\.github/workflows/ci\.yml)$' || bun=false
           fi
-          echo "go=${go}" >> "$GITHUB_OUTPUT"
+          printf 'go=%s\nbun=%s\n' "${go}" "${bun}" >> "$GITHUB_OUTPUT"
 
   # Fails only on vulnerabilities this change adds over its base (rules/dependencies.md).
   # What is already on main is the scan's to track, in advisory-scan.yml. The action retries
   # a network failure itself and never retries a real finding.
   govulncheck:
     needs: changes
-    if: needs.changes.outputs.go == 'true'
+    # A failed changes job still runs the gate: a missing base must not read as nothing changed.
+    if: ${{ !cancelled() && (needs.changes.result == 'failure' || needs.changes.outputs.go == 'true') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -188,6 +193,23 @@ jobs:
         with:
           mode: gate
           command: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
+
+  # bun audit reads the lockfile, so neither side needs an install.
+  bun-audit:
+    needs: changes
+    # A failed changes job still runs the gate: a missing base must not read as nothing changed.
+    if: ${{ !cancelled() && (needs.changes.result == 'failure' || needs.changes.outputs.bun == 'true') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - uses: alrayyes/advisory-scan@425418a63e80eb10142fbd2e82127b7ef3a51d68
+        with:
+          mode: gate
+          command: bun audit
 
   # Validates .goreleaser.yml without running a release, so a typo in the
   # config surfaces on the pull request that introduced it rather than on
