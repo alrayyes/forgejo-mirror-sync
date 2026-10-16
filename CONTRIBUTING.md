@@ -75,11 +75,12 @@ bun run lint:prose         # vale
 bun run lint:mechanics     # ltex-cli-plus
 ```
 
-CI's `govulncheck` job differs from the local command in one way: it fails a
-pull request only for vulnerabilities that pull request adds over its base,
-while the local command lists everything. What is already on `main` is tracked
-by `advisory-scan.yml`, which keeps one open `Dependency advisories` issue and
-closes it when the audit is clean. Nothing is ignored.
+CI's `govulncheck` and `bun-audit` jobs differ from the local command in one
+way: they fail a pull request only for vulnerabilities that pull request adds
+over its base, while the local command lists everything. `bun audit` is the
+on-demand check for the lock file. What is already on `main` is tracked by
+`advisory-scan.yml`, which keeps one open `Dependency advisories` issue and
+closes it when both audits are clean. Nothing is ignored.
 
 ## How it fits together
 
