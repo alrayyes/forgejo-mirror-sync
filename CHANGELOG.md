@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.2](https://github.com/alrayyes/forgejo-mirror-sync/compare/v0.4.1...v0.4.2) (2026-10-16)
+
+
+### Bug Fixes
+
+* **deps:** bump Go to 1.26.9 for the standard-library advisories ([#48](https://github.com/alrayyes/forgejo-mirror-sync/issues/48)) ([877e049](https://github.com/alrayyes/forgejo-mirror-sync/commit/877e0496cc5248bc541829fa6ea00ccd9691d3ba)), closes [#46](https://github.com/alrayyes/forgejo-mirror-sync/issues/46)
+
 ## [0.4.1](https://github.com/alrayyes/forgejo-mirror-sync/compare/v0.4.0...v0.4.1) (2026-10-15)
 
 
