@@ -28,8 +28,10 @@
   on first use.
 
 - **[`govulncheck`](https://go.dev/doc/tutorial/govulncheck)** needs nothing
-  installed: the hook and CI run it with
-  `go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...`.
+  installed: CI runs it with
+  `go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...`. No pre-push hook
+  does: it would fail every push the day an advisory lands on `main`,
+  whatever the push changed. Run it by hand when you want the full list.
 - **[`goreleaser`](https://goreleaser.com)**, for `goreleaser check` — only
   validates `.goreleaser.yml`, never runs a real release locally.
 
