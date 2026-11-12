@@ -55,6 +55,11 @@ file list, plus hadolint on the Dockerfile. Anything
 that needs the whole tree or a build, such as `golangci-lint run ./...` and
 the Docker build, runs in `pre-push` and CI.
 
+The grammar and spelling check in `pre-push` is the exception: it checks only
+the Markdown in your push, and all of it when `.ltex.json` or
+`scripts/lint-mechanics.sh` changed, so a push with no prose never starts the
+JVM. CI and `bun run lint:mechanics` check every document.
+
 ```sh
 go build ./...              # host go — nothing to pin, doesn't need a matched version
 go vet ./...
@@ -74,7 +79,7 @@ docker run --rm -i -v "$(pwd)/.hadolint.yaml:/.hadolint.yaml" \
 bun run format:check       # prettier --check, add --write to fix
 bun run lint:md
 bun run lint:prose         # vale
-bun run lint:mechanics     # ltex-cli-plus
+bun run lint:mechanics     # ltex-cli-plus, every document
 ```
 
 CI's `govulncheck` and `bun-audit` jobs differ from the local command in one

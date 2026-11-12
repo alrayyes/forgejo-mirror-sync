@@ -18,6 +18,8 @@ on:
       - .vale.ini
       - .ltex.json
       - styles/**
+      - scripts/lint-*.sh
+      - scripts/test-lint-*.sh
       - .github/workflows/prose.yml
   # No paths filter here. Branch protection requires both jobs below, and a
   # required check that never starts leaves the PR BLOCKED with every visible
@@ -60,6 +62,9 @@ jobs:
           apt-get install -y --no-install-recommends git nodejs
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Check the mechanics hook
+        run: ./scripts/test-lint-mechanics.sh
 
       - name: Check the prose this repository owns
         # safe.directory: actions/checkout's own fix for this writes to a
