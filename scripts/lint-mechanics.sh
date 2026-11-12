@@ -19,6 +19,29 @@ cd "$(dirname "$0")/.."
 # avoid.
 VERSION=18.7.0
 
+# CHANGELOG.md is written by the release job; correcting it is not this
+# script's business.
+all=$(git ls-files '*.md' | grep -v '^CHANGELOG.md$' | grep -v '^\.claude/')
+
+# Run bare (CI, `bun run lint:mechanics`), it checks all of them. The pre-push
+# hook passes the files in the push: only the Markdown among them is checked,
+# so a push that changed one document doesn't start a JVM over every one. A push
+# that includes .ltex.json or this script, which can change the verdict on any
+# file, checks them all, as CI would. Decided before ltex is located, so a push
+# with no prose doesn't trigger the download either.
+files=$all
+if [ $# -gt 0 ]; then
+  if printf '%s\n' "$@" | grep -Eq '^(\.ltex\.json|scripts/lint-mechanics\.sh)$'; then
+    files=$all
+  else
+    files=$(printf '%s\n' "$@" | grep -Fx -f <(printf '%s\n' "$all") || true)
+    if [ -z "$files" ]; then
+      echo "No prose in this push for ltex to check."
+      exit 0
+    fi
+  fi
+fi
+
 if command -v ltex-cli-plus >/dev/null 2>&1; then
   CLI=$(command -v ltex-cli-plus)
 else
@@ -49,10 +72,6 @@ else
   fi
   export JAVA_HOME="$jdk"
 fi
-
-# CHANGELOG.md is written by the release job; correcting it is not this
-# script's business.
-files=$(git ls-files '*.md' | grep -v '^CHANGELOG.md$' | grep -v '^\.claude/')
 
 echo "Checking:"
 echo "$files"
