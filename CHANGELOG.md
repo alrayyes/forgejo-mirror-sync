@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.3](https://github.com/alrayyes/forgejo-mirror-sync/compare/v0.4.2...v0.4.3) (2026-11-12)
+
+
+### Bug Fixes
+
+* **deps:** Bump github.com/spf13/pflag ([#63](https://github.com/alrayyes/forgejo-mirror-sync/issues/63)) ([042c9b7](https://github.com/alrayyes/forgejo-mirror-sync/commit/042c9b7429366e9d8957f3ff6d8635d6d9aca0fc))
+* **deps:** Bump golang.org/x/term ([#57](https://github.com/alrayyes/forgejo-mirror-sync/issues/57)) ([76f9926](https://github.com/alrayyes/forgejo-mirror-sync/commit/76f9926b934c6a7970f69de127c9bba3fc508f4f))
+
 ## [0.4.2](https://github.com/alrayyes/forgejo-mirror-sync/compare/v0.4.1...v0.4.2) (2026-10-16)
 
 
