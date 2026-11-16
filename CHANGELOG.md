@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.4](https://github.com/alrayyes/forgejo-mirror-sync/compare/v0.4.3...v0.4.4) (2026-11-16)
+
+
+### Bug Fixes
+
+* **deps:** Bump golang.org/x/term ([#67](https://github.com/alrayyes/forgejo-mirror-sync/issues/67)) ([53f724a](https://github.com/alrayyes/forgejo-mirror-sync/commit/53f724a49b37c287404ff85e8272ac94a22530cc))
+
 ## [0.4.3](https://github.com/alrayyes/forgejo-mirror-sync/compare/v0.4.2...v0.4.3) (2026-11-12)
 
 
